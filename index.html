@@ -137,7 +137,7 @@ footer a{color:var(--text3)}
   </div>
 
   <div class="note np">
-    <strong>Why does dataset size not affect proving cost?</strong> The PDP protocol always samples exactly <strong>5 random pieces per proof</strong> (hardcoded in the contract), regardless of how many pieces are in the dataset or how large they are. This was verified across all 11,134 <code>provePossession</code> transactions on mainnet — every single one had <code>challenge_count = 5</code>. So a 1 MB dataset and a 1 TiB dataset cost <strong>the same gas to prove</strong>. The SP's daily proving cost scales only with the <strong>number of active datasets</strong>, not their size or content.
+    <strong>Dataset size does not affect proving cost significantly</strong> The PDP protocol always samples exactly <strong>5 random pieces per proof</strong>, regardless of how many pieces are in the dataset or how large they are. We consider the average average proving cost value among all the different values observed in the given time window. We'll consider refining this assumption later.
   </div>
 </div>
 
