@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FWSS Gas & Cost Calculator</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#fff;--bg2:#f5f5f3;--bg3:#edebe5;
+  --text:#1a1a1a;--text2:#555;--text3:#999;
+  --border:rgba(0,0,0,0.11);--border2:rgba(0,0,0,0.22);
+  --r:8px;--rl:12px;
+  --teal:#1D9E75;--tl:#E1F5EE;--td:#085041;
+  --blue:#378ADD;--bl:#E6F1FB;--bd:#0C447C;
+  --al:#FAEEDA;--ad:#633806;
+  --red:#A32D2D;
+  --pl:#EDE9FE;--pd:#4C1D95;
+}
+@media(prefers-color-scheme:dark){
+  :root{
+    --bg:#1c1c1c;--bg2:#262626;--bg3:#303030;
+    --text:#f0f0f0;--text2:#aaa;--text3:#666;
+    --border:rgba(255,255,255,0.11);--border2:rgba(255,255,255,0.22);
+    --tl:#085041;--td:#9FE1CB;--bl:#0C447C;--bd:#B5D4F4;
+    --al:#412402;--ad:#FAC775;--pl:#2E1065;--pd:#DDD6FE;
+  }
+}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;background:var(--bg3);color:var(--text);font-size:14px;line-height:1.6;padding:1.5rem 1rem}
+.page{max-width:900px;margin:0 auto}
+h1{font-size:21px;font-weight:600;margin-bottom:3px}
+.sub{font-size:12px;color:var(--text2);margin-bottom:10px}
+.sub a,.cd a{color:var(--blue)}
+.sbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 12px;background:var(--bg2);border-radius:var(--r);border:0.5px solid var(--border);font-size:12px;color:var(--text2);margin-bottom:1rem}
+.dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;background:var(--teal)}
+.dot.spin{background:#BA7517;animation:blink 1s infinite}
+.dot.err{background:var(--red)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.card{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--rl);padding:1rem 1.25rem;margin-bottom:1rem}
+.ct{font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px}
+.cd{font-size:12px;color:var(--text2);margin-bottom:.85rem;line-height:1.6}
+.cd code,.cd strong{color:var(--text)}
+.cd code{font-family:monospace;font-size:11px;background:var(--bg2);padding:1px 5px;border-radius:3px}
+.cd strong{font-weight:600}
+.g2{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+.g3{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.g4{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
+.metric{background:var(--bg2);border-radius:var(--r);padding:.75rem 1rem}
+.ml{font-size:11px;color:var(--text2);margin-bottom:3px}
+.mv{font-size:19px;font-weight:600;color:var(--text);line-height:1.2}
+.ms{font-size:11px;color:var(--text3);margin-top:3px}
+.mv.ok{color:var(--teal)}
+.pr{display:flex;align-items:center;gap:10px;margin-bottom:.55rem}
+.pl{font-size:13px;color:var(--text2);min-width:210px;flex-shrink:0}
+.pv{font-size:13px;font-weight:500;color:var(--text);min-width:100px;text-align:right;font-variant-numeric:tabular-nums}
+.derived{font-size:12px;color:var(--td);background:var(--tl);border-radius:var(--r);padding:7px 12px;margin-bottom:.75rem;line-height:1.5}
+input[type=range]{flex:1;accent-color:var(--blue);cursor:pointer}
+input[type=number]{width:130px;padding:5px 8px;border:0.5px solid var(--border2);border-radius:var(--r);background:var(--bg);color:var(--text);font-size:13px}
+.tog{display:inline-flex;background:var(--bg2);border-radius:var(--r);overflow:hidden;border:0.5px solid var(--border)}
+.tog button{padding:5px 14px;font-size:12px;background:transparent;border:none;cursor:pointer;color:var(--text2);transition:all .15s}
+.tog button.on{background:var(--bg);color:var(--text);font-weight:500;box-shadow:inset 0 0 0 0.5px var(--border2)}
+.bfc{background:var(--bg2);border-radius:var(--r);padding:8px 12px}
+.bfl{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em}
+.bfv{font-size:15px;font-weight:600;color:var(--text);margin-top:2px}
+.bfs{font-size:10px;color:var(--text3);margin-top:1px}
+.presets{display:flex;flex-wrap:wrap;gap:6px;margin-top:.5rem}
+.presets button{padding:5px 12px;font-size:12px;background:var(--bg2);border:0.5px solid var(--border);border-radius:20px;cursor:pointer;color:var(--text2);transition:all .15s}
+.presets button.on{background:var(--bl);color:var(--bd);border-color:var(--blue);font-weight:500}
+.presets button:hover:not(.on){border-color:var(--border2);color:var(--text)}
+table{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed}
+th{text-align:left;font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;padding:5px 8px;border-bottom:0.5px solid var(--border)}
+td{padding:6px 8px;border-bottom:0.5px solid var(--border);color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+tr:last-child td{border-bottom:none}
+.tr{text-align:right;font-variant-numeric:tabular-nums}
+tfoot td{font-weight:600;padding:7px 8px;border-top:1px solid var(--border2)}
+.pill{display:inline-block;font-size:10px;padding:2px 7px;border-radius:20px;font-weight:500}
+.pt{background:var(--tl);color:var(--td)}.pb{background:var(--bl);color:var(--bd)}.pg{background:var(--bg2);color:var(--text2);border:0.5px solid var(--border)}
+.fbox{background:var(--tl);border:0.5px solid var(--teal);border-radius:var(--rl);padding:1rem 1.25rem;margin-bottom:1rem}
+.fbt{font-size:10px;font-weight:600;color:var(--td);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px}
+.fbv{font-size:32px;font-weight:700;color:var(--td);line-height:1}
+.fbd{font-size:12px;color:var(--td);margin-top:8px;line-height:1.6;opacity:.9}
+.fbd code{font-family:monospace;font-size:11px;background:rgba(0,0,0,0.07);padding:1px 5px;border-radius:3px}
+.note{font-size:12px;padding:8px 12px;border-radius:var(--r);margin-top:8px;border-left:2px solid;line-height:1.5}
+.na{background:var(--al);color:var(--ad);border-color:#BA7517}
+.nb{background:var(--bl);color:var(--bd);border-color:var(--blue)}
+.nt{background:var(--tl);color:var(--td);border-color:var(--teal)}
+.np{background:var(--pl);color:var(--pd);border-color:#7C3AED}
+.step{display:flex;gap:10px;margin-bottom:10px;font-size:12px;line-height:1.6;color:var(--text2)}
+.step strong{color:var(--text);font-weight:600}
+.step code{font-family:monospace;font-size:11px;background:var(--bg2);padding:1px 5px;border-radius:3px;color:var(--text)}
+.step-num{width:22px;height:22px;border-radius:50%;background:var(--bl);color:var(--bd);font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px}
+.chart-wrap{position:relative;width:100%}
+.legend{display:flex;flex-wrap:wrap;gap:10px;font-size:11px;color:var(--text2);margin-bottom:8px}
+.li{display:flex;align-items:center;gap:5px}
+.ls{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+.rbtn{font-size:11px;padding:3px 10px;cursor:pointer;border:0.5px solid var(--border2);border-radius:var(--r);background:var(--bg);color:var(--text2);transition:all .15s;margin-left:auto}
+.rbtn:hover{color:var(--text)}
+footer{text-align:center;font-size:11px;color:var(--text3);margin-top:1.5rem;padding-top:1rem;border-top:0.5px solid var(--border)}
+footer a{color:var(--text3)}
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>FWSS gas &amp; cost calculator</h1>
+<div class="sub">Real gas costs for Filecoin FWSS operations, based on actual mainnet transactions. Base fee live from <a href="https://api.node.glif.io">Glif</a>. FIL price live from <a href="https://coingecko.com">CoinGecko</a>. Gas data from <a href="https://foc-observer.va.gg">FOC Observer MCP</a> (mainnet, since FWSS v1.2.0).</div>
+
+<div class="sbar">
+  <span class="dot" id="dot-fil"></span>
+  <span id="txt-fil">Loading FIL price...</span>
+  <span style="color:var(--border2);padding:0 2px">|</span>
+  <span class="dot" id="dot-bf"></span>
+  <span id="txt-bf">Fetching base fee from Glif...</span>
+  <button class="rbtn" onclick="fetchAll()">Refresh live data</button>
+</div>
+
+<!-- HOW IT WORKS -->
+<div class="card">
+  <div class="ct">How costs are calculated</div>
+
+  <div class="step">
+    <div class="step-num">1</div>
+    <div><strong>Every transaction burns gas.</strong> The cost in FIL is: <code>gas_units &times; base_fee &divide; 10&sup1;&sup8;</code>. The <em>gas_units</em> measure computation. The <em>base_fee</em> is the market price per unit, in attoFIL (10&sup1;&sup8; attoFIL = 1 FIL).</div>
+  </div>
+  <div class="step">
+    <div class="step-num">2</div>
+    <div><strong>Gas units are measured empirically.</strong> We queried all FWSS transactions on mainnet since v1.2.0 and averaged the gas used per operation type. For example: <code>provePossession</code> averaged 191.2M gas across 11,134 real transactions. These values are stable because EVM execution is deterministic.</div>
+  </div>
+  <div class="step">
+    <div class="step-num">3</div>
+    <div><strong>Base fee is fetched live</strong> from the Filecoin network via Glif's public node. Historical averages (24h, 30d, 90d) are also computed from the same on-chain transaction dataset — they reflect what FWSS users actually paid.</div>
+  </div>
+  <div class="step">
+    <div class="step-num">4</div>
+    <div><strong>Total cost = sum of all operations</strong> in the observation period: dataset creation (once), piece additions (per upload), daily proving (every day, per dataset), and termination (once).</div>
+  </div>
+
+  <div class="note np">
+    <strong>Why does dataset size not affect proving cost?</strong> The PDP protocol always samples exactly <strong>5 random pieces per proof</strong> (hardcoded in the contract), regardless of how many pieces are in the dataset or how large they are. This was verified across all 11,134 <code>provePossession</code> transactions on mainnet — every single one had <code>challenge_count = 5</code>. So a 1 MB dataset and a 1 TiB dataset cost <strong>the same gas to prove</strong>. The SP's daily proving cost scales only with the <strong>number of active datasets</strong>, not their size or content.
+  </div>
+</div>
+
+<!-- GAS REFERENCE -->
+<div class="card">
+  <div class="ct">Empirical gas units — measured on mainnet since FWSS v1.2.0</div>
+  <div class="cd">Average gas units per operation from real transactions. Teal rows = daily recurring SP cost. The "depends on" column shows what drives variability in gas cost.</div>
+  <div style="overflow-x:auto">
+  <table>
+    <thead><tr>
+      <th style="width:22%">Operation</th>
+      <th class="tr" style="width:9%">Txns</th>
+      <th class="tr" style="width:13%">Avg gas</th>
+      <th class="tr" style="width:13%">Min gas</th>
+      <th class="tr" style="width:13%">Max gas</th>
+      <th style="width:13%">Frequency</th>
+      <th style="width:17%">Gas depends on</th>
+    </tr></thead>
+    <tbody>
+      <tr>
+        <td>createDataSet</td><td class="tr">352</td><td class="tr">1,117.7M</td><td class="tr">916.7M</td><td class="tr">1,438.7M</td>
+        <td><span class="pill pg">once/dataset</span></td><td style="font-size:11px;color:var(--text2)">fixed</td>
+      </tr>
+      <tr>
+        <td>addPieces &times;1</td><td class="tr">325,737</td><td class="tr">314.4M</td><td class="tr">242.1M</td><td class="tr">1,438.7M</td>
+        <td><span class="pill pb">per upload tx</span></td><td style="font-size:11px;color:var(--text2)">batch size</td>
+      </tr>
+      <tr>
+        <td>addPieces &times;5</td><td class="tr">10</td><td class="tr">625.2M</td><td class="tr">580.0M</td><td class="tr">655.5M</td>
+        <td><span class="pill pb">per upload tx</span></td><td style="font-size:11px;color:var(--text2)">batch size</td>
+      </tr>
+      <tr>
+        <td>addPieces &times;9</td><td class="tr">1</td><td class="tr">927.3M</td><td class="tr">927.3M</td><td class="tr">927.3M</td>
+        <td><span class="pill pb">per upload tx</span></td><td style="font-size:11px;color:var(--text2)">batch size</td>
+      </tr>
+      <tr style="background:var(--tl)">
+        <td style="color:var(--td);font-weight:500">provePossession</td><td class="tr" style="color:var(--td)">11,134</td><td class="tr" style="color:var(--td)">191.2M</td><td class="tr" style="color:var(--td)">146.7M</td><td class="tr" style="color:var(--td)">324.8M</td>
+        <td><span class="pill pt">daily/dataset</span></td><td style="font-size:11px;color:var(--td)">fixed (5 challenges)</td>
+      </tr>
+      <tr style="background:var(--tl)">
+        <td style="color:var(--td);font-weight:500">nextProvingPeriod</td><td class="tr" style="color:var(--td)">11,749</td><td class="tr" style="color:var(--td)">150.6M</td><td class="tr" style="color:var(--td)">93.5M</td><td class="tr" style="color:var(--td)">9,530M*</td>
+        <td><span class="pill pt">daily/dataset</span></td><td style="font-size:11px;color:var(--td)">fixed</td>
+      </tr>
+      <tr>
+        <td>terminateService</td><td class="tr">399</td><td class="tr">138.3M</td><td class="tr">116.9M</td><td class="tr">269.9M</td>
+        <td><span class="pill pg">once/dataset</span></td><td style="font-size:11px;color:var(--text2)">fixed</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note na">* <code>nextProvingPeriod</code> has one outlier at 9,530M gas — likely a base fee spike. Typical range is 93M–325M gas.</div>
+</div>
+
+<!-- BASE FEE -->
+<div class="card">
+  <div class="ct">Base fee — live &amp; historical</div>
+  <div class="cd">Fetched live from Glif's public Lotus node (<code>Filecoin.ChainHead</code>). Historical values are computed from actual FWSS on-chain transactions in the FOC Observer database.</div>
+  <div class="g4" style="margin-bottom:.85rem">
+    <div class="bfc"><div class="bfl">Current (Glif live)</div><div class="bfv" id="bfv-live">—</div><div class="bfs">attoFIL &middot; latest block</div></div>
+    <div class="bfc"><div class="bfl">Historical low</div><div class="bfv">~104k</div><div class="bfs">attoFIL &middot; min observed</div></div>
+    <div class="bfc"><div class="bfl">24h avg</div><div class="bfv">~240k</div><div class="bfs">attoFIL &middot; FOC Observer</div></div>
+    <div class="bfc"><div class="bfl">30d avg</div><div class="bfv">~251k</div><div class="bfs">attoFIL &middot; FOC Observer</div></div>
+    <div class="bfc"><div class="bfl">90d avg</div><div class="bfv">~564k</div><div class="bfs">attoFIL &middot; FOC Observer</div></div>
+    <div class="bfc"><div class="bfl">High spike</div><div class="bfv">~1.1B</div><div class="bfs">attoFIL &middot; observed max</div></div>
+  </div>
+  <div style="font-size:12px;color:var(--text2);margin-bottom:6px">Select a scenario — or type a custom value</div>
+  <div class="presets">
+    <button id="pre-live" onclick="applyLive(this)">Live current</button>
+    <button onclick="applyVal(104373,this)">Historical low (104k)</button>
+    <button onclick="applyVal(240240,this)">24h avg (240k)</button>
+    <button onclick="applyVal(251425,this)" class="on" id="pre-default">30d avg (251k)</button>
+    <button onclick="applyVal(563966,this)">90d avg (564k)</button>
+    <button onclick="applyVal(1098785765,this)">High spike (1.1B)</button>
+  </div>
+  <div class="pr" style="margin-top:.75rem">
+    <span class="pl">Custom base fee (attoFIL)</span>
+    <input type="number" id="base-fee" value="251425" step="1000" min="100" oninput="clearPresets();recalc()">
+    <span style="font-size:11px;color:var(--text3);margin-left:4px" id="bf-hint"></span>
+  </div>
+</div>
+
+<!-- FIL PRICE -->
+<div class="card">
+  <div class="ct">FIL price</div>
+  <div class="cd">Fetched live from CoinGecko. Override manually to model different price scenarios.</div>
+  <div class="pr">
+    <span class="pl">FIL price (USD)</span>
+    <input type="number" id="fil-price" value="0.87" step="0.01" min="0.01" oninput="recalc()">
+    <span style="font-size:11px;color:var(--text3);margin-left:4px" id="fil-src">—</span>
+  </div>
+</div>
+
+<!-- MINIMUM FLOOR PRICE -->
+<div class="fbox">
+  <div class="fbt">Minimum floor price — computed from live data</div>
+  <div class="fbv" id="floor-val">$—</div>
+  <div class="fbd">
+    This is the <strong>mathematical minimum</strong> a client must pay per dataset per 30 days to cover the SP's unavoidable daily gas costs — the two daily proving transactions every active dataset requires.<br><br>
+    Formula: <code>(191.2M + 150.6M gas) &times; base_fee &divide; 10&sup1;&sup8; &times; FIL_price &times; 30 days</code><br><br>
+    Updates automatically when you change base fee or FIL price. This is the theoretical floor — a real pricing decision should add margin for base fee volatility.
+  </div>
+</div>
+
+<!-- PARAMETERS -->
+<div class="card">
+  <div class="ct">Usage parameters</div>
+  <div class="cd">
+    Configure your scenario for the observation period below. A few things to be clear about:
+    <br><br>
+    <strong>Total pieces to add</strong> = the total number of individual pieces you plan to add across the whole period.
+    <br>
+    <strong>Avg pieces per addPieces call</strong> = how many pieces you put in each transaction on average. If batching is off, this is always 1. If on, you choose a batch size — each call adds that many pieces in one transaction.
+    <br>
+    <strong>Number of transactions</strong> is derived automatically: <code>ceil(total_pieces &divide; pieces_per_call)</code>.
+    <br>
+    <strong>Proving cost does not depend on dataset size or piece count</strong> — it depends only on how many datasets are active. Each dataset requires one <code>provePossession</code> + one <code>nextProvingPeriod</code> per day, always.
+  </div>
+
+  <div class="pr">
+    <span class="pl">Observation period (days)</span>
+    <input type="range" id="n-days" min="1" max="365" value="30" step="1" oninput="sync('n-days','n-days-out','days');recalc()">
+    <span class="pv" id="n-days-out">30 days</span>
+  </div>
+  <div class="pr">
+    <span class="pl">Number of datasets</span>
+    <input type="range" id="n-ds" min="1" max="100" value="1" step="1" oninput="sync('n-ds','n-ds-out','');recalc()">
+    <span class="pv" id="n-ds-out">1</span>
+  </div>
+  <div class="pr">
+    <span class="pl">Total pieces to add</span>
+    <input type="range" id="n-pieces" min="1" max="50000" value="100" step="1" oninput="sync('n-pieces','n-pieces-out','');recalc()">
+    <span class="pv" id="n-pieces-out">100</span>
+  </div>
+  <div class="pr" style="align-items:flex-start">
+    <span class="pl" style="padding-top:5px">Batching</span>
+    <div>
+      <div class="tog" style="margin-bottom:8px">
+        <button class="on" id="boff" onclick="setBatch(false)">Off — 1 piece per tx</button>
+        <button id="bon" onclick="setBatch(true)">On — multiple pieces per tx</button>
+      </div>
+      <div id="bsr" style="display:none" class="pr">
+        <span style="font-size:12px;color:var(--text2);min-width:160px">Avg pieces per call</span>
+        <input type="range" id="bsz" min="2" max="9" value="5" step="1" oninput="sync('bsz','bsz-out','pieces/tx');recalc()">
+        <span class="pv" id="bsz-out">5 pieces/tx</span>
+      </div>
+    </div>
+  </div>
+  <div class="derived" id="derived-txt">= 100 addPieces transactions over 30 days</div>
+</div>
+
+<!-- COST TABLE -->
+<div class="card">
+  <div class="ct">Cost breakdown — total for the period</div>
+  <div class="cd"><span class="pill pt">daily SP</span> = SP pays this every day per dataset, regardless of client activity. <span class="pill pb">upload</span> = paid when adding data. <span class="pill pg">one-time</span> = paid once per dataset lifecycle.</div>
+  <div style="overflow-x:auto">
+  <table>
+    <thead><tr>
+      <th style="width:30%">Operation</th>
+      <th class="tr" style="width:10%">Txns</th>
+      <th class="tr" style="width:14%">Total gas</th>
+      <th class="tr" style="width:16%">FIL cost</th>
+      <th class="tr" style="width:14%">USD cost</th>
+      <th style="width:16%">Type</th>
+    </tr></thead>
+    <tbody id="cost-tbody"></tbody>
+    <tfoot><tr>
+      <td colspan="3">Total</td>
+      <td class="tr" id="total-fil"></td>
+      <td class="tr" id="total-usd"></td>
+      <td></td>
+    </tr></tfoot>
+  </table>
+  </div>
+</div>
+
+<!-- SUMMARY METRICS -->
+<div class="card">
+  <div class="ct">Summary metrics</div>
+  <div class="g3" style="margin-bottom:.5rem">
+    <div class="metric">
+      <div class="ml">Total cost</div>
+      <div class="mv" id="m-total">—</div>
+      <div class="ms" id="m-period">for 30 days</div>
+    </div>
+    <div class="metric">
+      <div class="ml">Cost per piece (gas only)</div>
+      <div class="mv" id="m-piece">—</div>
+      <div class="ms">USD · amortised per piece added</div>
+    </div>
+    <div class="metric">
+      <div class="ml">Batching saving</div>
+      <div class="mv" id="m-saving">—</div>
+      <div class="ms">gas saved per piece vs single calls</div>
+    </div>
+    <div class="metric">
+      <div class="ml">SP daily proving cost</div>
+      <div class="mv" id="m-daily">—</div>
+      <div class="ms">USD · per dataset · per day</div>
+    </div>
+    <div class="metric">
+      <div class="ml">SP 30-day proving cost</div>
+      <div class="mv" id="m-monthly">—</div>
+      <div class="ms">USD · per dataset · 30 days</div>
+    </div>
+    <div class="metric">
+      <div class="ml">addPieces transactions</div>
+      <div class="mv ok" id="m-txns">—</div>
+      <div class="ms">total upload calls in period</div>
+    </div>
+  </div>
+</div>
+
+<!-- CHART -->
+<div class="card">
+  <div class="ct">USD cost by operation type</div>
+  <div class="cd">Shows how total cost is split across operation types. Hover for exact values. Useful for understanding which operations dominate at different usage levels.</div>
+  <div class="legend" id="cost-legend"></div>
+  <div class="chart-wrap" style="height:220px">
+    <canvas id="costChart" role="img" aria-label="Stacked bar chart of USD cost by FWSS operation type">USD cost breakdown by operation.</canvas>
+  </div>
+</div>
+
+<footer>
+  FWSS Gas &amp; Cost Calculator &nbsp;&middot;&nbsp;
+  Gas data: <a href="https://foc-observer.va.gg">FOC Observer MCP</a> (mainnet, since FWSS v1.2.0) &nbsp;&middot;&nbsp;
+  Base fee: <a href="https://api.node.glif.io">Glif public node</a> &nbsp;&middot;&nbsp;
+  FIL price: <a href="https://coingecko.com">CoinGecko</a> &nbsp;&middot;&nbsp;
+  Built by Luca
+</footer>
+</div>
+
+<script>
+const GAS={
+  createDataSet:1117.7e6,
+  addPieces:{1:314.4e6,2:381.6e6,3:466.3e6,4:552.3e6,5:625.2e6,6:706.5e6,7:783.6e6,9:927.3e6},
+  provePossession:191.2e6,
+  nextProvingPeriod:150.6e6,
+  terminateService:138.3e6,
+};
+const OP_COLORS=['#B5D4F4','#AFA9EC','#9FE1CB','#5DCAA5','#D3D1C7'];
+let batching=false, costChart=null, liveBF=null;
+
+function gasForBatch(n){return GAS.addPieces[n]||GAS.addPieces[5];}
+function sync(id,out,sfx){const v=document.getElementById(id).value;document.getElementById(out).textContent=sfx?v+' '+sfx:v;}
+function setBatch(on){
+  batching=on;
+  document.getElementById('boff').className=on?'':'on';
+  document.getElementById('bon').className=on?'on':'';
+  document.getElementById('bsr').style.display=on?'flex':'none';
+  recalc();
+}
+function clearPresets(){document.querySelectorAll('.presets button').forEach(b=>b.className='');}
+function applyVal(v,btn){document.getElementById('base-fee').value=v;clearPresets();btn.className='on';recalc();}
+function applyLive(btn){
+  if(liveBF!==null){document.getElementById('base-fee').value=Math.round(liveBF);clearPresets();btn.className='on';recalc();}
+  else fetchBaseFee();
+}
+function g2f(gas,bf){return gas*bf/1e18;}
+function fFIL(n){if(n<1e-7)return n.toFixed(10)+' FIL';if(n<1e-4)return n.toFixed(7)+' FIL';return n.toFixed(5)+' FIL';}
+function fUSD(n){if(n<0.00001)return '$'+n.toFixed(8);if(n<0.001)return '$'+n.toFixed(6);if(n<1)return '$'+n.toFixed(4);return '$'+n.toFixed(2);}
+function fGas(n){return(n/1e6).toFixed(1)+'M';}
+function fBF(n){if(n>=1e9)return(n/1e9).toFixed(1)+'B';if(n>=1e6)return(n/1e6).toFixed(1)+'M';if(n>=1e3)return Math.round(n/1e3)+'k';return Math.round(n)+'';}
+
+function recalc(){
+  const filP=parseFloat(document.getElementById('fil-price').value)||0.87;
+  const bf=parseFloat(document.getElementById('base-fee').value)||251425;
+  const nPieces=parseInt(document.getElementById('n-pieces').value)||100;
+  const nDS=parseInt(document.getElementById('n-ds').value)||1;
+  const nDays=parseInt(document.getElementById('n-days').value)||30;
+  const bsz=batching?(parseInt(document.getElementById('bsz').value)||5):1;
+
+  const nTxns=Math.ceil(nPieces/bsz);
+  const gasPerTx=gasForBatch(bsz);
+
+  document.getElementById('m-period').textContent='for '+nDays+' days';
+  document.getElementById('m-txns').textContent=nTxns.toLocaleString();
+  document.getElementById('derived-txt').textContent=
+    '= '+nTxns.toLocaleString()+' addPieces transaction'+(nTxns===1?'':'s')+
+    (batching?' ('+bsz+' pieces each)':'')+
+    ' over '+nDays+' day'+(nDays===1?'':'s')+
+    ', across '+nDS+' dataset'+(nDS===1?'':'s');
+
+  const rows=[
+    {op:'createDataSet',       txns:nDS,            gas:GAS.createDataSet,    type:'one-time'},
+    {op:batching?'addPieces \xD7'+bsz+' (batched)':'addPieces \xD71',
+                               txns:nTxns*nDS,       gas:gasPerTx,             type:'upload'},
+    {op:'provePossession',     txns:nDS*nDays,       gas:GAS.provePossession,  type:'daily SP'},
+    {op:'nextProvingPeriod',   txns:nDS*nDays,       gas:GAS.nextProvingPeriod,type:'daily SP'},
+    {op:'terminateService',    txns:nDS,             gas:GAS.terminateService, type:'one-time'},
+  ];
+
+  let tFIL=0,tUSD=0;
+  const usdByOp=[];
+  const tbody=document.getElementById('cost-tbody');
+  tbody.innerHTML='';
+  rows.forEach(r=>{
+    const tg=r.txns*r.gas;
+    const fil=g2f(tg,bf);
+    const usd=fil*filP;
+    tFIL+=fil;tUSD+=usd;usdByOp.push(usd);
+    const pill=r.type==='daily SP'?'<span class="pill pt">daily SP</span>':
+               r.type==='upload'?'<span class="pill pb">upload</span>':
+               '<span class="pill pg">one-time</span>';
+    tbody.innerHTML+=`<tr><td>${r.op}</td><td class="tr">${r.txns.toLocaleString()}</td><td class="tr">${fGas(tg)}</td><td class="tr">${fFIL(fil)}</td><td class="tr">${fUSD(usd)}</td><td>${pill}</td></tr>`;
+  });
+  document.getElementById('total-fil').textContent=fFIL(tFIL);
+  document.getElementById('total-usd').textContent=fUSD(tUSD);
+  document.getElementById('m-total').textContent=fUSD(tUSD);
+
+  const pieceCost=g2f(gasPerTx,bf)*filP/bsz;
+  document.getElementById('m-piece').textContent='$'+pieceCost.toFixed(7);
+
+  if(batching){
+    const s=(g2f(GAS.addPieces[1],bf)-g2f(gasForBatch(bsz),bf)/bsz)/g2f(GAS.addPieces[1],bf)*100;
+    const el=document.getElementById('m-saving');
+    el.textContent=s.toFixed(1)+'%';el.className='mv ok';
+  }else{
+    document.getElementById('m-saving').textContent='n/a (batching off)';
+    document.getElementById('m-saving').className='mv';
+  }
+
+  const dailyFIL=g2f(GAS.provePossession+GAS.nextProvingPeriod,bf);
+  const dailyUSD=dailyFIL*filP;
+  document.getElementById('m-daily').textContent='$'+dailyUSD.toFixed(7);
+  document.getElementById('m-monthly').textContent=fUSD(dailyUSD*30);
+
+  const floorUSD=dailyUSD*30;
+  document.getElementById('floor-val').textContent=fUSD(floorUSD)+' / dataset / 30 days';
+  document.getElementById('bf-hint').textContent='= $'+(g2f(1e9,bf)*filP).toFixed(6)+' per 1B gas';
+
+  updateChart(rows,usdByOp);
+}
+
+function updateChart(rows,usdByOp){
+  document.getElementById('cost-legend').innerHTML=rows.map((r,i)=>
+    `<div class="li"><span class="ls" style="background:${OP_COLORS[i]}"></span>${r.op}</div>`
+  ).join('');
+  const ctx=document.getElementById('costChart');
+  if(costChart)costChart.destroy();
+  costChart=new Chart(ctx,{
+    type:'bar',
+    data:{
+      labels:['Total cost'],
+      datasets:rows.map((r,i)=>({label:r.op,data:[usdByOp[i]],backgroundColor:OP_COLORS[i],borderWidth:0}))
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.dataset.label+': '+fUSD(c.parsed.y)}}},
+      scales:{
+        x:{stacked:true,grid:{display:false},ticks:{color:'#888'}},
+        y:{stacked:true,grid:{color:'rgba(128,128,128,0.15)'},ticks:{color:'#888',callback:v=>fUSD(v)}}
+      }
+    }
+  });
+}
+
+async function fetchFILPrice(){
+  const dot=document.getElementById('dot-fil');
+  const txt=document.getElementById('txt-fil');
+  dot.className='dot spin';
+  try{
+    const r=await fetch('https://api.coingecko.com/api/v3/simple/price?ids=filecoin&vs_currencies=usd');
+    const d=await r.json();
+    const p=d?.filecoin?.usd;
+    if(p){
+      document.getElementById('fil-price').value=p.toFixed(4);
+      document.getElementById('fil-src').textContent='live · CoinGecko';
+      dot.className='dot';
+      txt.textContent='FIL $'+p.toFixed(4)+' (CoinGecko live)';
+      recalc();
+    }else throw new Error();
+  }catch(e){dot.className='dot err';txt.textContent='FIL price: using manual input';}
+}
+
+async function fetchBaseFee(){
+  const dot=document.getElementById('dot-bf');
+  const txt=document.getElementById('txt-bf');
+  dot.className='dot spin';
+  try{
+    const r=await fetch('https://api.node.glif.io/rpc/v1',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({jsonrpc:'2.0',id:1,method:'Filecoin.ChainHead',params:[]})
+    });
+    const d=await r.json();
+    const bf=d?.result?.Blocks?.[0]?.ParentBaseFee;
+    if(bf){
+      liveBF=parseInt(bf);
+      document.getElementById('bfv-live').textContent=fBF(liveBF);
+      dot.className='dot';
+      txt.textContent='Base fee: '+fBF(liveBF)+' attoFIL (Glif · latest block)';
+    }else throw new Error();
+  }catch(e){
+    dot.className='dot err';
+    txt.textContent='Base fee: Glif unavailable — using selected preset';
+  }
+}
+
+async function fetchAll(){await Promise.all([fetchFILPrice(),fetchBaseFee()]);recalc();}
+
+recalc();
+fetchAll();
+</script>
+</body>
+</html>
